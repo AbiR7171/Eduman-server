@@ -36,6 +36,36 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
+
+
+    const usersCollection = client.db("eduman-server").collection("users");
+
+
+    app.post("/users", async(req, res)=>{
+         
+            const user = req.body;
+            console.log(user);
+            const query = {email: user?.email}
+            const alreadyExist = await usersCollection.findOne(query);
+            console.log(alreadyExist);
+
+            if(alreadyExist){
+               return  res.send("Already Have an account")
+            }
+            const result = await usersCollection.insertOne(user)
+            res.send(result)
+    })
+
+
+    app.get("/login/:email", async(req, res)=>{
+
+          const email = req.params.email;
+          const query = {email: email};
+          const result = await usersCollection.find(query).toArray()
+          res.send(result)
+    })
+
+
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
