@@ -35,6 +35,7 @@ async function run() {
     const appliedInstructorCollection = client.db("eduman-server").collection('appliedInstructor')
     const appliedCoursesCollection = client.db("eduman-server").collection('appliedCourses')
     const usersCollection = client.db("eduman-server").collection("users");
+    const courseCollection = client.db("eduman-server").collection("courses");
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
@@ -74,6 +75,14 @@ async function run() {
       const result = await usersCollection.find().toArray();
       res.send(result)
     })  
+    app.get('/currentUsers/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {
+        email: email
+      }
+      const result = await usersCollection.findOne(query);
+      res.send(result)
+    })  
     app.put('/instructorReq/:email', async(req, res)=>{
       const email = req.params.email;
       const body = req.body;
@@ -85,11 +94,26 @@ async function run() {
       const result = await usersCollection.updateOne(query, updateDoc)
       res.send(result)
     })
-    app.delete('/delete/:id', async(req, res)=>{
+    app.delete('/delete/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email : email}
+      const result = await appliedInstructorCollection.deleteOne(query);
+      res.send(result)
+    })
+    app.post('/approvedCourse', async(req, res)=>{
+      const body = req.body;
+      const result = await courseCollection.insertOne(body)
+      res.send(result)
+    })
+    app.get('/allCourses', async(req, res)=>{
+      const result = await courseCollection.find().toArray()
+      res.send(result)
+    })
+    app.delete('/deleteAppliedCourse/:id', async(req, res)=>{
       const id = req.params.id;
       console.log(id)
-      const query = {email : id}
-      const result = await usersCollection.deleteOne(query);
+      const query = {_id : new ObjectId(id) }
+      const result = await appliedCoursesCollection.deleteOne(query);
       res.send(result)
     })
 
