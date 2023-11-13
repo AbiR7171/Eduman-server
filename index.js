@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const dotenv = require("dotenv");
 dotenv.config()
+const jwt = require('jsonwebtoken');
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require("cors");
@@ -11,6 +12,21 @@ const port = process.env.PORT || 5000 ;
 
 app.use(cors());
 app.use(express.json());
+
+const verifyJWT = (req, res, next) =>{
+  const authorization = req.headers.authorization;
+  if(!authorization){
+    return res.status(401).send({error: true, message: 'unauthorized access'})
+  }
+  const token = authorization.split(' ')[1];
+  jwt.verify(token, process.env.Access_Token,(err, decoded) =>{
+    if(err){
+      return res.status(403).send({error: true, message: 'unauthorized access'})
+    }
+    req.decoded = decoded;
+    next()
+  })
+}
 
 
 // VAGmLhxWvJxEin5Z
@@ -30,7 +46,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-// <<<<<<< HEAD
+
 
     const appliedInstructorCollection = client.db("eduman-server").collection('appliedInstructor')
     const appliedCoursesCollection = client.db("eduman-server").collection('appliedCourses')
@@ -38,18 +54,30 @@ async function run() {
     const courseCollection = client.db("eduman-server").collection("courses");
     const enrolledCollection = client.db("eduman-server").collection("enrolled");
     const cartCollection = client.db("eduman-server").collection("cart");
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
-    app.get('/user/instructor/:email',  async (req, res) =>{
+
+    app.post('/jwt', (req, res)=>{
+      const body = req.body;
+      const token = jwt.sign(body, process.env.Access_Token, {expiresIn : '1h'})
+      res.send(token)
+    })
+    app.get('/user/instructor/:email', verifyJWT,  async (req, res) =>{
       const email = req.params.email;
+      const decoEmail = req.decoded.email;
+        
+        if(email !== decoEmail){
+          return ({admin: false})
+        }
       const query = {email: email};
       const user = await usersCollection.findOne(query);
       const result = {admin: user?.role === 'instructor'}
       res.send(result)
     })
-    app.get('/user/admin/:email',  async (req, res) =>{
+    app.get('/user/admin/:email',verifyJWT,  async (req, res) =>{
       const email = req.params.email;
+      const decoEmail = req.decoded.email;
+      if(email !== decoEmail){
+        return ({admin: false})
+      }
       const query = {email: email};
       const user = await usersCollection.findOne(query);
       const result = {admin: user?.role === 'admin'}
@@ -89,8 +117,9 @@ async function run() {
       const result = await usersCollection.find().toArray();
       res.send(result)
     })  
-    app.get('/currentUsers/:email', async(req, res)=>{
+    app.get('/currentUsers/:email',verifyJWT, async(req, res)=>{
       const email = req.params.email;
+      
       const query = {
         email: email
       }
